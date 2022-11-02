@@ -1,6 +1,6 @@
 # Death and Taxes: Survivor
 
-_The only sure certain is death and taxes._
+_The only thing certain is death and taxes._
 
 Entry for GitHub Game Off 2022
 
