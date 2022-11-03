@@ -9,24 +9,33 @@ function _init()
 
     timer = 0
     lastSpawn = 0
+    kills = 0
 
     player = {}
     player.spr = 0
-    player.x = 64
-    player.y = 64
+    player.x = 60
+    player.y = 60
     player.w = 8
     player.h = 8
     player.speed = .5
+    player.heath = 3
+    player.invincible = 0
 
     enemies = {}
+    projectiles = {}
 
     music(0)
 end
 
 function _draw()
     cls(color.black)
-    print(tostr(flr(timer)), 0, 0, color.white)
+
+    print(tostr(flr(timer)), 0, 0, color.dark_gray)
+    print(tostr(flr(score())), 62, 0, color.white)
+    drawHealth()
+
     foreach(enemies, drawEnemy)
+
     spr(player.spr, player.x, player.y, 1, 1, player.flipX)
 end
 
@@ -39,6 +48,20 @@ function _update60()
     foreach(enemies, moveEnemy)
 end
 
+function drawHealth()
+    for i = 0,player.heath do
+        spr(2, 128 - (i * 6), 0, .625, .5)
+    end
+end
+
+function drawEnemy(enemy)
+    spr(enemy.spr, enemy.x, enemy.y, enemy.w / 8, enemy.h / 8)
+end
+
+function score()
+    return kills + flr(timer / 10)
+end
+
 function spawnEnemy()
     local i = flr(rnd(2)) + 3
     local x = flr(rnd(128))
@@ -47,17 +70,13 @@ function spawnEnemy()
     if (timer - lastSpawn > 2) then makeEnemy(i, x, y) end
 end
 
-function drawEnemy(enemy)
-    spr(enemy.spr, enemy.x, enemy.y)
-end
-
 function makeEnemy(spr, x, y)
     local enemy = {}
     enemy.spr = spr
     enemy.x = x
     enemy.y = y
-    enemy.w = 8
-    enemy.h = 8
+    enemy.w = 5
+    enemy.h = 5
     enemy.speed = .1
 
     add(enemies, enemy)
@@ -68,16 +87,16 @@ function makeEnemy(spr, x, y)
 end
 
 function movePlayer()
-    if (btn(0)) then
+    if (btn(0) and player.x > -4) then
         player.x -= player.speed
         player.flipX = true
     end
-    if (btn(1)) then
+    if (btn(1) and player.x < 124) then
         player.x += player.speed
         player.flipX = false
     end
-    if (btn(2)) then player.y -= player.speed end
-    if (btn(3)) then player.y += player.speed end
+    if (btn(2) and player.y > -4) then player.y -= player.speed end
+    if (btn(3) and player.y < 124) then player.y += player.speed end
 end
 
 function moveEnemy(enemy)
@@ -96,10 +115,10 @@ function moveEnemy(enemy)
 end
 
 __gfx__
-044ffff000aaaa0001100000077700000aaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-44ff1f1f0aa99aa011d1000075757000a999a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-444fffffaa9aa9aa1111000077777000a9aaa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-044ffef0aa9aaaaa0110000007570000a999a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+044ffff000aaaa0008080000077700000aaa00000110000060000000000000000000000000000000000000000000000000000000000000000000000000000000
+44ff1f1f0aa99aa0888e800075757000a999a00011d1000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+444fffffaa9aa9aa0888000077777000a9aaa0001111000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+044ffef0aa9aaaaa0080000007570000a999a0000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 07778770aa9aaaaa00000000000000000aaa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0f77877faa9aa9aa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 066666600aa99aa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
