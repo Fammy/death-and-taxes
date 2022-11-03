@@ -5,12 +5,15 @@ __lua__
 function _init()
     color = {}
     color.black = 0
-    color.dark_gray = 5
+    color.darkGray = 5
+    color.lightGray = 6
     color.white = 7
 
     timer = 0
     lastSpawn = 0
+    spawnRate = 2
     kills = 0
+    safeDistance = 36
 
     player = {}
     player.spr = 0
@@ -22,6 +25,8 @@ function _init()
     player.speed = .5
     player.health = 3
     player.invincible = 0
+    player.lastFire = 0
+    player.fireRate = 1
 
     enemies = {}
     projectiles = {}
@@ -32,12 +37,13 @@ end
 function _draw()
     cls(color.black)
 
-    print(tostr(flr(timer)), 0, 0, color.dark_gray)
+    print(tostr(flr(timer)), 0, 0, color.darkGray)
     print(tostr(flr(score())), 62, 0, color.white)
     drawHealth()
 
     if (player.health > 0) then
         foreach(enemies, drawEnemy)
+        foreach(projectiles, drawProjectile)
     end
     drawPlayer()
 end
@@ -55,9 +61,10 @@ function _update60()
 
     spawnEnemy()
 
-    foreach(enemies, checkCollision)
+    foreach(enemies, checkCollisions)
 
     updatePlayer()
+    foreach(projectiles, updateProjectile)
     foreach(enemies, updateEnemy)
 end
 
@@ -75,20 +82,31 @@ function drawHealth()
     end
 end
 
+function drawProjectile(p)
+    pset(p.x, p.y, color.lightGray)
+end
+
 function drawEnemy(enemy)
     spr(enemy.spr, enemy.x, enemy.y, enemy.w / 8, enemy.h / 8)
 end
 
 function score()
-    return kills + flr(timer / 10)
+    return kills-- + flr(timer / 10)
 end
 
 function spawnEnemy()
-    local i = flr(rnd(2)) + 3
-    local x = flr(rnd(128))
-    local y = flr(rnd(128))
+    if (timer - lastSpawn > spawnRate) then
+        local i = flr(rnd(2)) + 3
+        local x = flr(rnd(128))
+        local y = flr(rnd(128))
 
-    if (timer - lastSpawn > 2) then makeEnemy(i, x, y) end
+        if (abs(x - player.x) < safeDistance or abs(y - player.y) < safeDistance) then
+            spawnEnemy()
+            return
+        end
+
+        makeEnemy(i, x, y)
+    end
 end
 
 function makeEnemy(spr, x, y)
@@ -98,7 +116,7 @@ function makeEnemy(spr, x, y)
     enemy.y = y
     enemy.w = 5
     enemy.h = 5
-    enemy.health = 1
+    enemy.health = 2
     enemy.speed = .1
 
     add(enemies, enemy)
@@ -106,6 +124,35 @@ function makeEnemy(spr, x, y)
     lastSpawn = timer
 
     return enemy
+end
+
+function makeProjectile()
+    local e = enemies[1]
+    if (e == nil) then return end
+
+    local angle = atan2(centerX(e) - centerX(player), centerY(e) - centerY(player))
+
+    local p = {}
+    p.x = centerX(player)
+    p.y = centerY(player)
+    p.w = 1
+    p.h = 1
+    p.dx = cos(angle)
+    p.dy = sin(angle)
+
+    add(projectiles, p)
+
+    player.lastFire = timer
+
+    return p
+end
+
+function centerX(entity)
+    return entity.x + (entity.w / 2)
+end
+
+function centerY(entity)
+    return entity.y + (entity.h / 2)
 end
 
 function updatePlayer()
@@ -119,7 +166,21 @@ function updatePlayer()
     end
     if (btn(2) and player.y > -4) then player.y -= player.speed end
     if (btn(3) and player.y < 124) then player.y += player.speed end
+
+    if (player.lastFire + player.fireRate <= timer) then
+        makeProjectile()
+    end
 end
+
+function updateProjectile(p)
+    p.x += p.dx
+    p.y += p.dy
+
+    if (p.x < 0 or p.x > 128 or p.y < 0 or p.y > 128) then
+        del(projectiles, p)
+    end
+end
+
 
 function updateEnemy(enemy)
     if (enemy.x < player.x) then
@@ -136,15 +197,36 @@ function updateEnemy(enemy)
     end
 end
 
-function checkCollision(enemy)
+function checkCollisions(enemy)
+    checkPlayerCollision(enemy)
+    for p in all(projectiles) do
+        checkProjectileCollision(enemy, p)
+    end
+end
+
+function checkPlayerCollision(enemy)
     if (player.invincible <= 0 and collide(enemy, player)) then
         player.health -=1
         player.invincible = 60
-        del(enemies, enemy)
+    end
+end
+
+function checkProjectileCollision(enemy, p)
+    if (collide(enemy, p)) then
+        enemy.health -= 1
+        del(projectiles, p)
+        if (enemy.health <= 0) then
+            del(enemies, enemy)
+            kills += 1
+            spawnRate -= .1
+            if (spawnRate < .1) then spawnRate = .1 end
+        end
     end
 end
 
 function collide(e1, e2)
+    if (e1 == nil or e2 == nil) then return false end
+
     return not (e1.x > e2.x + e2.w or
            e1.y > e2.y + e2.h or
            e1.x + e1.w < e2.x or
@@ -152,7 +234,7 @@ function collide(e1, e2)
 end
 
 __gfx__
-044ffff000aaaa0008080000077700000aaa00000110000060000000000000000000000000000000000000000000000000000000000000000000000000000000
+044ffff000aaaa0008080000077700000aaa00000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 44ff1f1f0aa99aa0888e800075757000a999a00011d1000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 444fffffaa9aa9aa0888000077777000a9aaa0001111000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 044ffef0aa9aaaaa0080000007570000a999a0000110000000000000000000000000000000000000000000000000000000000000000000000000000000000000
