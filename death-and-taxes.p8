@@ -1,6 +1,7 @@
 pico-8 cartridge // http://www.pico-8.com
 version 38
 __lua__
+
 function _init()
     color = {}
     color.black = 0
@@ -13,12 +14,13 @@ function _init()
 
     player = {}
     player.spr = 0
+    player.sprDamage = 16
     player.x = 60
     player.y = 60
     player.w = 8
     player.h = 8
     player.speed = .5
-    player.heath = 3
+    player.health = 3
     player.invincible = 0
 
     enemies = {}
@@ -34,22 +36,41 @@ function _draw()
     print(tostr(flr(score())), 62, 0, color.white)
     drawHealth()
 
-    foreach(enemies, drawEnemy)
-
-    spr(player.spr, player.x, player.y, 1, 1, player.flipX)
+    if (player.health > 0) then
+        foreach(enemies, drawEnemy)
+    end
+    drawPlayer()
 end
 
 function _update60()
     timer += 1/60
 
+    if (player.health <= 0) then
+        if (btn(4)) then _init() end
+        return
+    end
+
+    player.invincible -= 1
+    if (player.invincible < 0) then player.invincible = 0 end
+
     spawnEnemy()
 
-    movePlayer()
-    foreach(enemies, moveEnemy)
+    foreach(enemies, checkCollision)
+
+    updatePlayer()
+    foreach(enemies, updateEnemy)
+end
+
+function drawPlayer()
+    local s = player.spr
+    if (flr(player.invincible) % 10 > 0 or player.health <= 0) then
+        s = player.sprDamage
+    end
+    spr(s, player.x, player.y, 1, 1, player.flipX, player.health <= 0)
 end
 
 function drawHealth()
-    for i = 0,player.heath do
+    for i = 0,player.health do
         spr(2, 128 - (i * 6), 0, .625, .5)
     end
 end
@@ -77,6 +98,7 @@ function makeEnemy(spr, x, y)
     enemy.y = y
     enemy.w = 5
     enemy.h = 5
+    enemy.health = 1
     enemy.speed = .1
 
     add(enemies, enemy)
@@ -86,7 +108,7 @@ function makeEnemy(spr, x, y)
     return enemy
 end
 
-function movePlayer()
+function updatePlayer()
     if (btn(0) and player.x > -4) then
         player.x -= player.speed
         player.flipX = true
@@ -99,7 +121,7 @@ function movePlayer()
     if (btn(3) and player.y < 124) then player.y += player.speed end
 end
 
-function moveEnemy(enemy)
+function updateEnemy(enemy)
     if (enemy.x < player.x) then
         enemy.x += enemy.speed
     end
@@ -114,6 +136,21 @@ function moveEnemy(enemy)
     end
 end
 
+function checkCollision(enemy)
+    if (player.invincible <= 0 and collide(enemy, player)) then
+        player.health -=1
+        player.invincible = 60
+        del(enemies, enemy)
+    end
+end
+
+function collide(e1, e2)
+    return not (e1.x > e2.x + e2.w or
+           e1.y > e2.y + e2.h or
+           e1.x + e1.w < e2.x or
+           e1.y + e1.h < e2.y)
+end
+
 __gfx__
 044ffff000aaaa0008080000077700000aaa00000110000060000000000000000000000000000000000000000000000000000000000000000000000000000000
 44ff1f1f0aa99aa0888e800075757000a999a00011d1000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -123,6 +160,14 @@ __gfx__
 0f77877faa9aa9aa0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 066666600aa99aa00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0550055000aaaa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+022eeee0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+22ee1e1e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+222eeeee000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+022ee0e0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+07778770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0e77877e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+06666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+05500550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __label__
 70700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 70700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

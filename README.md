@@ -16,7 +16,7 @@ How long can you survive? Entry for GitHub Game Off 2022
 
 ## How to play
 
-Arrow keys move (as does WASD). Tax Grunt shoots automatically. Try not to die, but you will, it is certain.
+Arrow keys move and Z will restart when you die. Tax Grunt shoots automatically. Try not to die, but you will—it is certain. 💀
 
 ## About
 
