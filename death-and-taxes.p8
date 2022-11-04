@@ -13,7 +13,7 @@ function _init()
     lastSpawn = 0
     spawnRate = 2
     kills = 0
-    safeDistance = 36
+    spawnBuffer = 36
 
     player = {}
     player.spr = 0
@@ -32,6 +32,7 @@ function _init()
     projectiles = {}
 
     music(0)
+    musicPlaying = true
 end
 
 function _draw()
@@ -52,6 +53,10 @@ function _update60()
     timer += 1/60
 
     if (player.health <= 0) then
+        if (musicPlaying) then
+            musicPlaying = false
+            music(-1, 300)
+        end
         if (btn(4)) then _init() end
         return
     end
@@ -100,7 +105,7 @@ function spawnEnemy()
         local x = flr(rnd(128))
         local y = flr(rnd(128))
 
-        if (abs(x - player.x) < safeDistance or abs(y - player.y) < safeDistance) then
+        if (abs(x - player.x) < spawnBuffer or abs(y - player.y) < spawnBuffer) then
             spawnEnemy()
             return
         end
@@ -127,10 +132,10 @@ function makeEnemy(spr, x, y)
 end
 
 function makeProjectile()
-    local e = enemies[1]
-    if (e == nil) then return end
+    local nearest = getNearestEnemy()
+    if (nearest == nil) then return end
 
-    local angle = atan2(centerX(e) - centerX(player), centerY(e) - centerY(player))
+    local angle = atan2(centerX(nearest) - centerX(player), centerY(nearest) - centerY(player))
 
     local p = {}
     p.x = centerX(player)
@@ -145,6 +150,32 @@ function makeProjectile()
     player.lastFire = timer
 
     return p
+end
+
+function getNearestEnemy()
+    local nearest
+    local nearestD = 999
+
+    for e in all(enemies) do
+        local d = approx_dist(e, player)
+        if (d < nearestD) then
+            nearestD = d
+            nearest = e
+        end
+    end
+
+    return nearest
+end
+
+function approx_dist(e1, e2)
+    local dx = e1.x - e2.x
+    local dy = e1.y - e2.y
+    local maskx,masky=dx>>31,dy>>31
+    local a0,b0=(dx+maskx)^^maskx,(dy+masky)^^masky
+    if a0>b0 then
+     return a0*0.9609+b0*0.3984
+    end
+    return b0*0.9609+a0*0.3984
 end
 
 function centerX(entity)
@@ -180,7 +211,6 @@ function updateProjectile(p)
         del(projectiles, p)
     end
 end
-
 
 function updateEnemy(enemy)
     if (enemy.x < player.x) then
