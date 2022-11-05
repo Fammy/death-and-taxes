@@ -38,6 +38,7 @@ function _init()
     timer = 0
     lastSpawn = 0
     spawnRate = 2
+    enemySpeedBuff = 0
     kills = 0
     spawnBuffer = 48
 
@@ -108,7 +109,7 @@ function _update60()
 
     spawnEnemy()
 
-    foreach(enemies, checkCollisions)
+    foreach(enemies, checkEnemyCollisions)
 
     updatePlayer()
     foreach(projectiles, updateProjectile)
@@ -119,11 +120,9 @@ function drawPlayer()
     local s = player.spr
     if (flr(player.invincible) % 10 >= 5 or player.health <= 0) then
         s = player.sprDamage
-        printh("dmg")
     else
         if (player.move and flr(timer * 60) % 60 >= 30) then
             s = player.spr2
-            printh("spr2")
         end
     end
     spr(s, player.x, player.y, 1, 1, player.flipX, player.health <= 0)
@@ -168,6 +167,8 @@ function makeEnemy(i, x, y)
     local enemy = shallowcopy(enemyDef[i])
     enemy.x = x
     enemy.y = y
+    enemy.speed += enemySpeedBuff
+    enemy.move = true
     add(enemies, enemy)
     lastSpawn = timer
 end
@@ -229,6 +230,16 @@ end
 
 function updatePlayer()
     player.move = false
+
+    if (player.lastFire + player.fireRate <= timer) then
+        makeProjectile()
+    end
+
+    if (player.collide) then
+        player.collide = false
+        return
+    end
+
     if (btn(0) and player.x > 8) then
         player.x -= player.speed
         cam.x -= player.speed
@@ -251,10 +262,6 @@ function updatePlayer()
         cam.y += player.speed
         player.move = true
     end
-
-    if (player.lastFire + player.fireRate <= timer) then
-        makeProjectile()
-    end
 end
 
 function updateProjectile(p)
@@ -267,6 +274,11 @@ function updateProjectile(p)
 end
 
 function updateEnemy(enemy)
+    if (enemy.move == false) then
+        enemy.move = true
+        return
+    end
+
     if (enemy.x < player.x) then
         enemy.x += enemy.speed
     end
@@ -281,7 +293,7 @@ function updateEnemy(enemy)
     end
 end
 
-function checkCollisions(enemy)
+function checkEnemyCollisions(enemy)
     checkPlayerCollision(enemy)
     for p in all(projectiles) do
         checkProjectileCollision(enemy, p)
@@ -289,10 +301,13 @@ function checkCollisions(enemy)
 end
 
 function checkPlayerCollision(enemy)
-    if (player.invincible <= 0 and collide(enemy, player)) then
-        player.health -=1
-        player.invincible = 60
-        sfx(4)
+    if (collide(enemy, player)) then
+        enemy.move = false
+        if (player.invincible <= 0) then
+            player.health -=1
+            player.invincible = 60
+            sfx(4)
+        end
     end
 end
 
@@ -303,9 +318,16 @@ function checkProjectileCollision(enemy, p)
         if (enemy.health <= 0) then
             del(enemies, enemy)
             kills += 1
+            if (kills % 10 == 0 and player.health < 5) then
+                player.health += 1
+                sfx(6)
+            end
 
             spawnRate -= .1
-            if (spawnRate < .1) then spawnRate = .1 end
+            if (spawnRate < .1) then
+                spawnRate = .1
+                enemySpeedBuff += .001
+            end
 
             player.fireRate -= .05
             if (player.fireRate < .1) then player.fireRate = .1 end
@@ -574,6 +596,7 @@ __sfx__
 001000000a5000a5000a5000a5000a5000a5000a5000a500075000a5000a5000a5000a5000a5000a5000a5000a5000950009500095000950009500095000950009500095000950009500235201c520295202c520
 0003000029250232501d25015250102500f2500d2500e2500e2500e2500e2500d2500b25007250032000120000200002000020000200002000020000200002000020000200002000020000200002000020000200
 00100000000000000000000000000c0500a0500605003050010500005000050000400004000030000300002000010000000000000000000000000000000000000000000000000000000000000000000000000000
+0010000000000360502f0503b0502a000250002500037000390003900000000000002500000000000000000000000000000000036000370003700038000390003a00000000000000000000000000000000000000
 __music__
 02 01020344
 
