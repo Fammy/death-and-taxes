@@ -7,7 +7,9 @@ function _init()
         black = 0,
         darkGray = 5,
         lightGray = 6,
-        white = 7
+        white = 7,
+        red = 8,
+        yellow = 10
     }
 
     enemyDef = {
@@ -18,6 +20,14 @@ function _init()
             health = 2,
             speed = .1
         },
+        { -- bat
+            spr = 5,
+            spr2 = 21,
+            w = 7,
+            h = 4,
+            health = 1,
+            speed = .3,
+        },
         { -- coin
             spr = 4,
             w = 5,
@@ -25,14 +35,13 @@ function _init()
             health = 2,
             speed = .1
         },
-        { -- bat
-            spr = 5,
-            spr2 = 21,
-            w = 7,
-            h = 4,
-            health = 1,
-            speed = .3
-        }
+        { -- dollar
+            spr = 17,
+            w = 5,
+            h = 7,
+            health = 3,
+            speed = .05
+       }
     }
 
     timer = 0
@@ -41,6 +50,8 @@ function _init()
     enemySpeedBuff = 0
     kills = 0
     spawnBuffer = 48
+    act = 1
+    state = "menu" -- menu, act, playing
 
     cam = {
         x = 32,
@@ -68,21 +79,42 @@ function _init()
 
     enemies = {}
     projectiles = {}
-
-    music(0)
-    musicPlaying = true
 end
 
 function _draw()
     cls(color.black)
+
+    if (state == "menu") then drawMenu() end
+    if (state == "act") then drawAct() end
+    if (state == "playing") then drawPlaying() end
+end
+
+function drawMenu()
+    print("death and taxes: survivors", 12, 60, color.white)
+    print("PRESS z TO START", 34, 80, color.darkGray)
+end
+
+function drawAct()
+    local name = "death"
+    if (act == 2) then name = "taxes" end
+    if (act == 3) then name = "death and taxes" end
+    print("act"..act, 8, 60, color.white)
+    print(name, 128-timer*30, 60, color.red)
+end
+
+function drawPlaying()
     camera(cam.x, cam.y)
     map(0, 0, 0, 0, 128, 128)
 
     if (player.health > 0) then
         foreach(enemies, drawEnemy)
+    end
+
+    drawPlayer()
+
+    if (player.health > 0) then
         foreach(projectiles, drawProjectile)
     end
-    drawPlayer()
 
     camera()
 
@@ -91,7 +123,58 @@ function _draw()
     drawHealth()
 end
 
+function drawPlayer()
+    local s = player.spr
+    if (flr(player.invincible) % 10 >= 5 or player.health <= 0) then
+        s = player.sprDamage
+    else
+        if (player.move and flr(timer * 60) % 60 >= 30) then
+            s = player.spr2
+        end
+    end
+    spr(s, player.x, player.y, 1, 1, player.flipX, player.health <= 0)
+end
+
+function drawHealth()
+    for i = 0,player.health do
+        spr(2, 128 - (i * 6), 0, .625, .5)
+    end
+end
+
+function drawProjectile(p)
+    pset(p.x, p.y, color.yellow)
+end
+
+function drawEnemy(enemy)
+    local s = enemy.spr
+    if (enemy.spr2 != null and flr(timer * 60) % 30 >= 15) then s = enemy.spr2 end
+    spr(s, enemy.x, enemy.y, enemy.w / 8, enemy.h / 8)
+end
+
 function _update60()
+    if (state == "menu") then updateMenu() end
+    if (state == "act") then  updateAct() end
+    if (state == "playing") then updatePlaying() end
+end
+
+function updateMenu()
+    if (btn(4)) then
+        state = "act"
+    end
+end
+
+function updateAct()
+    timer += 1/60
+
+    if (timer >= 5) then
+        state = "playing"
+        music(0)
+        musicPlaying = true
+        timer = 0
+    end
+end
+
+function updatePlaying()
     if (player.health <= 0) then
         if (musicPlaying) then
             musicPlaying = false
@@ -116,41 +199,19 @@ function _update60()
     foreach(enemies, updateEnemy)
 end
 
-function drawPlayer()
-    local s = player.spr
-    if (flr(player.invincible) % 10 >= 5 or player.health <= 0) then
-        s = player.sprDamage
-    else
-        if (player.move and flr(timer * 60) % 60 >= 30) then
-            s = player.spr2
-        end
-    end
-    spr(s, player.x, player.y, 1, 1, player.flipX, player.health <= 0)
-end
-
-function drawHealth()
-    for i = 0,player.health do
-        spr(2, 128 - (i * 6), 0, .625, .5)
-    end
-end
-
-function drawProjectile(p)
-    pset(p.x, p.y, color.lightGray)
-end
-
-function drawEnemy(enemy)
-    local s = enemy.spr
-    if (enemy.spr2 != null and flr(timer * 60) % 30 >= 15) then s = enemy.spr2 end
-    spr(s, enemy.x, enemy.y, enemy.w / 8, enemy.h / 8)
-end
-
 function score()
     return kills-- + flr(timer / 10)
 end
 
 function spawnEnemy()
     if (timer - lastSpawn > spawnRate) then
-        local i = flr(rnd(3)) + 1
+        local c = rnd(count(enemyDef))
+        local s = 1
+        if (act < 3) then
+            c = rnd(count(enemyDef) / 2)
+            s = 1 + (act - 1) * 2
+        end
+        local i = flr(c) + s
         local x = flr(rnd(cam.w)) + cam.x
         local y = flr(rnd(cam.h)) + cam.y
 
@@ -318,6 +379,18 @@ function checkProjectileCollision(enemy, p)
         if (enemy.health <= 0) then
             del(enemies, enemy)
             kills += 1
+
+            if (act < 3 and kills >= act * 2) then
+                act += 1
+                timer = 0
+                state = "act"
+                music(-1, 300)
+                musicPlaying = 0
+                enemies = {}
+                projectiles = {}
+                return
+            end
+
             if (kills % 10 == 0 and player.health < 5) then
                 player.health += 1
                 sfx(6)
@@ -367,13 +440,13 @@ __gfx__
 0f778770aa9aa9aa0000000000000000000000000000000000000000000000000000000000000000000000500005000000000000888888680000000000000000
 066666600aa99aa00000000000000000000000000000000000050000000500050000050000000500050000000000000000000000888888680000000000000000
 0550055000aaaa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000888888680000000000000000
-022eeee0000000000000000000000000000000000010100000000000000000000000000000000000000000000000000000000000000000000000000000000000
-22ee1e1e000000000000000000000000000000000051500000000000000000000000000000000000000000000000000000000000000000000000000000000000
-222eeeee000000000000000000000000000000000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000
-022ee0e0000000000000000000000000000000001010101000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0e778770000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0777877e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-06666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+022eeee00b0b00000000000000000000000000000010100000000000000000000000000000000000000000000000000000000000000000000000000000000000
+22ee1e1e3b3330000000000000000000000000000051500000000000000000000000000000000000000000000000000000000000000000000000000000000000
+222eeeee3b0b00000000000000000000000000000111110000000000000000000000000000000000000000000000000000000000000000000000000000000000
+022ee0e0333b30000000000000000000000000001010101000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0e7787700b0b30000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0777877e333330000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+066666600b0b00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 05500550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 044ffff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 44ff1f1f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
