@@ -51,6 +51,7 @@ function _init()
     kills = 0
     spawnBuffer = 48
     act = 1
+    actKillsNeeded = 10
     state = "menu" -- menu, act, playing
 
     cam = {
@@ -99,7 +100,7 @@ function drawAct()
     if (act == 2) then name = "taxes" end
     if (act == 3) then name = "death and taxes" end
     print("act"..act, 8, 60, color.white)
-    print(name, 128-timer*30, 60, color.red)
+    print(name, 128-timer*60, 64, color.red)
 end
 
 function drawPlaying()
@@ -117,6 +118,10 @@ function drawPlaying()
     end
 
     camera()
+
+    if (player.health <= 0) then
+        print("PRESS z TO RETRY", 34, 80, color.red)
+    end
 
     print(tostr(flr(timer)), 0, 0, color.darkGray)
     print(tostr(flr(score())), 62, 0, color.white)
@@ -166,11 +171,13 @@ end
 function updateAct()
     timer += 1/60
 
-    if (timer >= 5) then
+    if (timer >= 3) then
         state = "playing"
         music(0)
         musicPlaying = true
         timer = 0
+        lastSpawn = 0
+        player.lastFire = 0
     end
 end
 
@@ -185,7 +192,7 @@ function updatePlaying()
         return
     end
 
-    timer += 1/60
+    timer += 1 / 60
 
     player.invincible -= 1
     if (player.invincible < 0) then player.invincible = 0 end
@@ -380,9 +387,11 @@ function checkProjectileCollision(enemy, p)
             del(enemies, enemy)
             kills += 1
 
-            if (act < 3 and kills >= act * 2) then
+            if (act < 3 and kills >= act * actKillsNeeded) then
                 act += 1
                 timer = 0
+                lastSpawn = 0
+                player.lastFire = 0
                 state = "act"
                 music(-1, 300)
                 musicPlaying = 0
