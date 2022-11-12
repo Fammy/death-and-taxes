@@ -91,7 +91,7 @@ function _draw()
 end
 
 function drawMenu()
-    print("death and taxes: survivors", 12, 60, color.white)
+    print("death and taxes: survivor", 14, 60, color.white)
     print("PRESS z TO START", 34, 80, color.darkGray)
 end
 
