@@ -308,26 +308,32 @@ function updatePlayer()
         return
     end
 
+    local delta = player.speed
+
+    if ((btn(0) and btn(2)) or (btn(0) and btn(3)) or (btn(1) and btn(2)) or (btn(1) and btn(3))) then
+        delta = player.speed * .85
+    end
+
     if (btn(0) and player.x > 8) then
-        player.x -= player.speed
-        cam.x -= player.speed
+        player.x -= delta
+        cam.x -= delta
         player.flipX = true
         player.move = true
     end
     if (btn(1) and player.x < cam.mX) then
-        player.x += player.speed
-        cam.x += player.speed
+        player.x += delta
+        cam.x += delta
         player.flipX = false
         player.move = true
     end
     if (btn(2) and player.y > 8) then
-        player.y -= player.speed
-        cam.y -= player.speed
+        player.y -= delta
+        cam.y -= delta
         player.move = true
     end
     if (btn(3) and player.y < cam.mY) then
-        player.y += player.speed
-        cam.y += player.speed
+        player.y += delta
+        cam.y += delta
         player.move = true
     end
 end
@@ -347,17 +353,32 @@ function updateEnemy(enemy)
         return
     end
 
+    local delta = enemy.speed
+
+    if (enemy.x < player.x and enemy.y < player.y) then
+        delta = enemy.speed * .85
+    end
+    if (enemy.x < player.x and enemy.y > player.y) then
+        delta = enemy.speed * .85
+    end
+    if (enemy.x > player.x and enemy.y < player.y) then
+        delta = enemy.speed * .85
+    end
+    if (enemy.x > player.x and enemy.y > player.y) then
+        delta = enemy.speed * .85
+    end
+
     if (enemy.x < player.x) then
-        enemy.x += enemy.speed
+        enemy.x += delta
     end
     if (enemy.x > player.x) then
-        enemy.x -= enemy.speed
+        enemy.x -= delta
     end
     if (enemy.y < player.y) then
-        enemy.y += enemy.speed
+        enemy.y += delta
     end
     if (enemy.y > player.y) then
-        enemy.y -= enemy.speed
+        enemy.y -= delta
     end
 end
 
