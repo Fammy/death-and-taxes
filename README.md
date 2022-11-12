@@ -12,7 +12,7 @@ How long can you survive? Entry for GitHub Game Off 2022
 
 ## Play the game
 
-[In your browser](https://famularo.org/death-and-taxes/death-and-taxes.html)
+[In your browser](https://fammy.itch.io/death-and-taxes-survivors)
 
 ## How to play
 
